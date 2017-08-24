@@ -6,6 +6,10 @@ use App\Note;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Facades\JWTAuth;
+
+use Illuminate\Validation\ValidationException;
 
 class NoteController extends Controller
 {
@@ -16,19 +20,18 @@ class NoteController extends Controller
      */
     public function index()
     {
-        return DB::table('notes')
-            ->paginate(5);
+
+        $user = JWTAuth::parseToken()->authenticate();
+        $data= DB::table('notes')
+             ->where('id', $user->id)
+            ->paginate(4);
+         $data['user'] = $user;
+
+        return response()->json($data);
+
+
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
 
     /**
      * Store a newly created resource in storage.
@@ -38,7 +41,34 @@ class NoteController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $user = JWTAuth::parseToken()->authenticate();
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'body' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+
+            $errors['errors'] = $validator->errors()->all();
+
+            return response()->json($errors) ;
+        }
+
+        $note = new Note();
+
+        $note->title = $request->get('title');
+        $note->body = $request->get('body');
+        $note->user_id = $user->id;
+
+        $note->save();
+
+        return response()->json([
+            'message' => 'Note created successfully'
+        ]);
+
+
+
     }
 
     /**
