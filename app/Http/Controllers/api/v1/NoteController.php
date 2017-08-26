@@ -6,10 +6,10 @@ use App\Note;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-use Illuminate\Validation\ValidationException;
 
 class NoteController extends Controller
 {
@@ -22,12 +22,12 @@ class NoteController extends Controller
     {
 
         $user = JWTAuth::parseToken()->authenticate();
-        $data= DB::table('notes')
-             ->where('id', $user->id)
+        $data['notes']= DB::table('notes')
+              ->where('id', $user->id)
             ->paginate(4);
-         $data['user'] = $user;
+          $data['user'] = $user;
 
-        return response()->json($data);
+        return response()->json($data, 200);
 
 
     }
@@ -45,27 +45,46 @@ class NoteController extends Controller
 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'body' => 'required|string'
+            'body' => 'required|string',
+            'reminder_date' => 'required|date',
+            'image' => 'required|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
         if ($validator->fails()) {
 
             $errors['errors'] = $validator->errors()->all();
+            return response()->json($errors, 200) ;
+        }
 
-            return response()->json($errors) ;
+        $pathToImage = null;
+
+        if(($request->file('image')) !== null){
+            $uploadedFileImage = $request->file('image');
+            $clientOriginalName = $uploadedFileImage->getClientOriginalName();
+            $pathToImage = Storage::putFileAs(
+                'public/notes-images',
+                $uploadedFileImage,
+                str_replace(".", "", $clientOriginalName)."_".str_random(10).".".$uploadedFileImage->getClientOriginalExtension()
+            );
+
         }
 
         $note = new Note();
 
         $note->title = $request->get('title');
         $note->body = $request->get('body');
+        $note->image_url = $pathToImage;
+        $note->reminder_date = $request->get('reminder_date');
         $note->user_id = $user->id;
+        $note->slug = str_slug($request->get('title')." ".$request->get('reminder_date'));
+
+
 
         $note->save();
 
         return response()->json([
             'message' => 'Note created successfully'
-        ]);
+        ], 201);
 
 
 
@@ -82,16 +101,6 @@ class NoteController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
 
     /**
      * Update the specified resource in storage.

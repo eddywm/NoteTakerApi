@@ -17,8 +17,11 @@ class CreateNotesTable extends Migration
             $table->increments('id');
             $table->string('title');
             $table->text('body');
-            $table->boolean('is_active')->default(1);
+            $table->boolean('is_seen')->default(0);
+            $table->dateTime('reminder_date');
+            $table->string('image_url')->nullable();
             $table->integer('user_id');
+            $table->string('slug')->unique();
             $table->timestamps();
         });
     }

@@ -42,7 +42,8 @@ class AuthenticateController extends Controller
                 'data' => [
                     'token' => $token,
                 ]
-            ]
+            ],
+            200
         );
     }
 
@@ -91,7 +92,7 @@ class AuthenticateController extends Controller
             'data' => [
                 'token' => $newToken
             ]
-        ]);
+        ],  200);
     }
 
 

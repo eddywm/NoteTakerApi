@@ -37,7 +37,7 @@ Route::group(['prefix' => '/v1/'], function () {
 
         Route::resource('/notes', 'api\v1\NoteController');
 
-    });
+     });
 
 	});
 
