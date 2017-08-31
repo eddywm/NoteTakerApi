@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\api\v1;
 
 use App\Note;
-use Illuminate\Http\Request;
+use Carbon\Carbon;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Input;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -20,12 +21,30 @@ class NoteController extends Controller
      */
     public function index()
     {
+        $note_data = [];
 
         $user = JWTAuth::parseToken()->authenticate();
-        $data['notes']= DB::table('notes')
-              ->where('id', $user->id)
-            ->paginate(4);
-          $data['user'] = $user;
+
+        $notes = Note::all();
+
+
+        foreach ($notes as $note){
+
+            $entry = [
+                'id' => $note->slug,
+                'title' => $note->title,
+                'body' => $note->body,
+                'imageUrl' => $note->imageUrl,
+                'reminderDate' => $note->reminderDate
+            ];
+
+
+            $note_data[] = $entry;
+        }
+
+
+        $data['notes'] = $note_data;
+        $data['user'] = $user;
 
         return response()->json($data, 200);
 
@@ -41,25 +60,42 @@ class NoteController extends Controller
      */
     public function store(Request $request)
     {
-        $user = JWTAuth::parseToken()->authenticate();
+
+
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(
+                [
+                    'error' => 'User not found',
+                    "meta" => [
+                        "status" =>  "USER_NOT_FOUND"
+                    ]
+                ], 404);
+        }
+
+
+        $reminderDate = (new Carbon($request->get('reminderDate')))->toDateTimeString();
+
+
 
         $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'body' => 'required|string',
-            'reminder_date' => 'required|date',
-            'image' => 'required|mimes:jpeg,png,jpg,gif,svg|max:2048'
+           'title' => 'required|string|max:255',
+           'body' => 'required|string',
+           'reminderDate' => 'required|date',
+            'imageUrl' => 'required|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
+
+        
 
         if ($validator->fails()) {
 
             $errors['errors'] = $validator->errors()->all();
-            return response()->json($errors, 200) ;
+            return response()->json($errors, 400) ;
         }
 
         $pathToImage = null;
 
-        if(($request->file('image')) !== null){
-            $uploadedFileImage = $request->file('image');
+        if(($request->file('imageUrl')) !== null){
+            $uploadedFileImage = $request->file('imageUrl');
             $clientOriginalName = $uploadedFileImage->getClientOriginalName();
             $pathToImage = Storage::putFileAs(
                 'public/notes-images',
@@ -71,19 +107,33 @@ class NoteController extends Controller
 
         $note = new Note();
 
-        $note->title = $request->get('title');
-        $note->body = $request->get('body');
-        $note->image_url = $pathToImage;
-        $note->reminder_date = $request->get('reminder_date');
-        $note->user_id = $user->id;
-        $note->slug = str_slug($request->get('title')." ".$request->get('reminder_date'));
 
+
+
+        $note->title = $request->get('title');
+//        $note->title = "Dummy Title";
+        $note->body = $request->get('body');
+//        $note->body = "Dummy body";
+        $note->imageUrl = $pathToImage;
+
+        $note->reminderDate = $reminderDate;
+//        $note->reminderDate = "2014-02-05 10:8:2";
+        $note->user_id = $user->id;
+        $note->slug = str_slug(substr($request->get('title'),0,10)."-".$reminderDate."-".rand(10000,900000));
 
 
         $note->save();
 
         return response()->json([
-            'message' => 'Note created successfully'
+            'message' => 'Note created successfully',
+            'note' => [
+                'title' => $note->title,
+                'slug' => $note->slug
+
+            ],
+            "meta" => [
+                "status" =>  "NOTE_CREATED"
+            ]
         ], 201);
 
 

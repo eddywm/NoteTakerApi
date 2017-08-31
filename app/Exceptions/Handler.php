@@ -5,6 +5,7 @@ namespace App\Exceptions;
 use Exception;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
 
 class Handler extends ExceptionHandler
@@ -47,8 +48,19 @@ class Handler extends ExceptionHandler
     {
         if ($exception instanceof TokenBlacklistedException) {
             return response()->json([
-                "error" => "token_blacklisted"
+                "error" => "The token was blacklisted",
+                "meta" => [
+                    "status" =>  "TOKEN_BLACKLISTED"
+                ]
             ], 401);
+        }
+        if ($exception instanceof JWTException) {
+            return response()->json([
+                "error" => "The token could not be parsed from the request",
+                "meta" => [
+                    "status" =>  "COULD_NOT_PARSE"
+                ]
+            ], 400);
         }
         return parent::render($request, $exception);
     }

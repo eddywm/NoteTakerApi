@@ -5,9 +5,11 @@
 $factory->define(App\User::class, function (Faker\Generator $faker) {
     static $password;
 
+    $name = $faker->name;
     return [
-        'name' => $faker->name,
+        'name' => $name,
         'email' => $faker->unique()->safeEmail,
+        'slug' => str_slug($name." ".$faker->numberBetween(10000,90000)." ".$faker->numberBetween(10000,90000)),
         'password' => $password ?: $password = bcrypt('secret'),
         'remember_token' => str_random(10),
     ];
@@ -23,7 +25,7 @@ $factory->define(App\Note::class, function (Faker\Generator $faker) {
         'title' => $sentence,
         'body' => $faker->paragraph,
         'is_seen' => $faker->boolean,
-        'reminder_date' => $reminderDate,
+        'reminderDate' => $reminderDate,
         'user_id' => $faker->numberBetween(1,10),
         'slug' => str_slug($sentence." ".$reminderDate->format("Y-m-d"))
     ];

@@ -11,10 +11,7 @@
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::group(['middleware' => 'cors'], function(){
+
 });
 
-
-
-Route::get('/home', 'HomeController@index')->name('home');

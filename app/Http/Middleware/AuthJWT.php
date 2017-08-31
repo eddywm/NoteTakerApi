@@ -8,6 +8,7 @@ use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
+
 class AuthJWT
 {
     /**
@@ -19,24 +20,46 @@ class AuthJWT
      */
     public function handle($request, Closure $next)
     {
-        try {
 
-            $user = JWTAuth::parseToken()->authenticate();
+        try{
+            if (! $user = JWTAuth::parseToken()->authenticate()) {
+                return response()->json(
+                    [
+                        'error' => 'User not found',
+                        "meta" => [
+                            "status" =>  "USER_NOT_FOUND"
+                        ]
+                    ], 404);
+            }
 
-        } catch (TokenExpiredException $e) {
+        }catch(TokenExpiredException $e) {
+                return response()->json([
+                    'error' => 'The token has expired',
+                    "meta" => [
+                        "status" =>  "TOKEN_HAS_EXPIRED"
+                        ]
+                ], $e->getStatusCode());
 
-            return response()->json(['token_expired'], $e->getStatusCode());
 
-        } catch (TokenInvalidException $e) {
-
-            return response()->json(['token_invalid'], $e->getStatusCode());
-
-        } catch (JWTException $e) {
-
-            return response()->json(['token_absent'], $e->getStatusCode());
-
-        }
-
+        }catch(TokenInvalidException $e) {
+                return response()->json(
+                    [
+                        'error' => 'The token is invalid',
+                        "meta" => [
+                            "status" =>  "INVALID_TOKEN"
+                        ]
+                    ]
+                    , $e->getStatusCode());
+        }catch (JWTException $e){
+                return response()->json(
+                    [
+                        'error' => 'The token is required',
+                        "meta" => [
+                            "status" =>  "TOKEN_NOT_FOUND"
+                        ]
+                    ], $e->getStatusCode()
+                );
+            }
 
         return $next($request);
     }
